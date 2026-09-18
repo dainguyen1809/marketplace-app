@@ -1,0 +1,32 @@
+# Production Docker Compose (no exposed ports, secrets from .env.docker.prod)
+services:
+  app:
+    build:
+      context: ./php
+    env_file:
+      - .env.docker.prod
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      - db
+
+  web:
+    image: nginx:alpine
+    # No direct port exposure; rely on reverse proxy or external load balancer
+    env_file:
+      - .env.docker.prod
+    volumes:
+      - ../:/var/www/html
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    env_file:
+      - .env.docker.prod
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:

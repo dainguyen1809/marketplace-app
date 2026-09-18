@@ -1,0 +1,72 @@
+networks:
+  ecommerce-network:
+    driver: bridge
+
+services:
+  app:
+    build:
+      context: ./php
+    env_file:
+      - .env.docker.dev
+    volumes:
+      - ../:/var/www/html
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    networks:
+      - ecommerce-network
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    env_file:
+      - .env.docker.dev
+    volumes:
+      - ../:/var/www/html
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - ecommerce-network
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.docker.dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6319:6379"
+    networks:
+      - ecommerce-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:alpine
+    command: -redis.addr redis://redis:6379
+    ports:
+      - 9121:9121
+    networks:
+      - ecommerce-network
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      - .env.docker.dev
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+    networks:
+      - ecommerce-network
